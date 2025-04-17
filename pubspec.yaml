@@ -1,0 +1,48 @@
+name: herzblatt_app # Kannst du ändern, wenn du willst
+description: Eine Flutter App für Ballermann Herzblatt.
+publish_to: 'none' # verhindert versehentliches Veröffentlichen
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0' # Prüfe ggf. deine Flutter SDK Version
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  audioplayers: ^5.2.1 # Für den Jingle
+  mobile_scanner: ^5.1.0 # Füge diese Zeile hinzu
+  qr_code_scanner: ^1.0.1 # <-- DIESE ZEILE HINZUFÜGEN (Version prüfen!)
+  qr_flutter: ^4.1.0    # <-- Dieses Paket hinzufügen
+  firebase_core: ^3.0.0 # <-- Kernpaket für Firebase (Version prüfen!)
+  cloud_firestore: ^5.0.0 # <-- Paket für Firestore (Version prüfen!)
+
+
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.13.1 # <-- HINZUFÜGEN (Version prüfen!)
+
+
+
+flutter:
+  uses-material-design: true
+
+  # Assets deklarieren
+  assets:
+    - assets/images/
+    - assets/audio/
+
+# Konfiguration für flutter_launcher_icons (GANZ AM ENDE EINFÜGEN)
+flutter_launcher_icons:
+  android: true             # Icons für Android generieren (oder Name z.B. "ic_launcher")
+  ios: true                 # Icons für iOS generieren
+  image_path: "assets/images/Icon.jpeg" # <-- PFAD ZU DEINER ICON-DATEI ANPASSEN!
+  min_sdk_android: 21       # Mindest-SDK für Android (optional, aber empfohlen)
+  # Optional: Für adaptive Icons auf Android (neuere Android-Versionen)
+  # adaptive_icon_background: "#ffffff" # Hintergrundfarbe (z.B. weiß) ODER Pfad zu einer Bilddatei
+  # adaptive_icon_foreground: "assets/icon/Icon_foreground.png" # Pfad zu einem Vordergrund-Icon (muss erstellt werden)

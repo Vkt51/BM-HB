@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "139110918785",
+    "project_id": "hb-bm-205c9",
+    "storage_bucket": "hb-bm-205c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:139110918785:android:0d6cee5cd4665685f5fb80",
+        "android_client_info": {
+          "package_name": "com.example.herzblatt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLKgHt-YPb9K7gh33ElD-OpEI60HCfC4Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
