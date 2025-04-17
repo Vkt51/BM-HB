@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async'; // Für Future
+import 'dart:math'; // Import für Random (wird für ID-Generierung benötigt)
+
 // Import für Firestore
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -38,8 +41,17 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     super.dispose();
   }
 
-  // Methode zum Erstellen des Raums und Navigieren
-  void _navigateToWaitingRoom() async { // Async wegen Firestore
+  // --- Hilfsfunktion zum Generieren kurzer IDs ---
+  String _generateShortId(int length) {
+    const String _chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final Random _rnd = Random();
+    return String.fromCharCodes(Iterable.generate(
+        length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
+  }
+  // ----------------------------------------------------
+
+  // --- Methode zum Erstellen des Raums und Navigieren ---
+  void _navigateToWaitingRoom() async {
     // Verhindere doppeltes Ausführen
     if (_isCreatingRoom) return;
 
@@ -54,22 +66,50 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
       final bool challengesEnabled = _hasChallenges;
       final int? numberOfChallenges = challengesEnabled ? _selectedNumberOfChallenges : null;
 
-      // --- Firestore Logik ---
+      // --- Firestore Logik mit kurzer, eindeutiger ID ---
       try {
         // Ladeindikator anzeigen
         showDialog(
            context: context,
            barrierDismissible: false,
-           builder: (BuildContext context) {
-             return const Center(child: CircularProgressIndicator(color: Colors.pinkAccent));
-           },
+           builder: (BuildContext context) => const Center(child: CircularProgressIndicator(color: Colors.pinkAccent)),
         );
 
-        // Referenz zur 'rooms' Collection
         CollectionReference roomsCollection = FirebaseFirestore.instance.collection('rooms');
+        String uniqueRoomId;
+        String moderatorId;
+        int retries = 0;
+        const int maxRetries = 10; // Sicherheitslimit für Generierungsversuche
 
-        // Daten für das neue Raum-Dokument
+        // Schleife zur Generierung und Überprüfung einer eindeutigen ID
+        while (true) {
+          if (retries >= maxRetries) {
+             throw Exception("Konnte nach $maxRetries Versuchen keine eindeutige Raum-ID generieren.");
+          }
+          retries++;
+
+          uniqueRoomId = _generateShortId(6); // Generiere 6-stellige ID
+          moderatorId = "MOD-$uniqueRoomId"; // Leite Moderator-ID ab
+
+          // Prüfe, ob die generierte Raum-ID bereits existiert (als Dokument-ID)
+          final docSnapshot = await roomsCollection.doc(uniqueRoomId).get();
+
+          if (!docSnapshot.exists) {
+            // ID ist eindeutig, Schleife verlassen
+            debugPrint('Eindeutige Raum-ID "$uniqueRoomId" nach $retries Versuch(en) gefunden.');
+            break;
+          } else {
+             debugPrint('Kollision bei Raum-ID "$uniqueRoomId". Neuer Versuch...');
+             await Future.delayed(const Duration(milliseconds: 50)); // Kurze Pause
+          }
+        }
+
+        // Daten für das neue Raum-Dokument erstellen
         Map<String, dynamic> roomData = {
+          // WICHTIG: Speichere die generierten IDs explizit als Felder im Dokument
+          'roomId': uniqueRoomId,
+          'moderatorId': moderatorId,
+          // ---------------------------------------------------------------------
           'creatorName': userName,
           'creatorUserId': null, // Später Firebase Auth User ID
           'numberOfQuestions': numberOfQuestions,
@@ -81,20 +121,20 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           'createdAt': Timestamp.now(), // Zeitstempel
         };
 
-        // Dokument hinzufügen -> Firestore generiert die ID
-        DocumentReference newRoomRef = await roomsCollection.add(roomData);
-        String newRoomId = newRoomRef.id; // Die ECHTE Raum-ID
-        String moderatorId = "MOD-$newRoomId"; // Abgeleitete Moderator-ID
+        // Dokument mit der generierten, eindeutigen `uniqueRoomId` als Dokument-ID erstellen
+        // und die `roomData` (welche die IDs auch als Felder enthält) speichern.
+        await roomsCollection.doc(uniqueRoomId).set(roomData);
 
         debugPrint('--- Raum erfolgreich in Firestore erstellt ---');
-        debugPrint('Firestore Document ID (Raum-ID): $newRoomId');
+        debugPrint('Eindeutige Raum-ID (Dokument-ID): $uniqueRoomId');
         debugPrint('Zugehörige Moderator ID: $moderatorId');
+        debugPrint('(IDs wurden auch als Felder im Dokument gespeichert)');
         debugPrint('-----------------------------------------');
 
         // Ladeindikator schließen (wichtig: Prüfung ob Widget noch gemountet ist)
         if (mounted) Navigator.of(context).pop();
 
-        // Zum Wartebereich navigieren und ECHTE IDs übergeben
+        // Zum Wartebereich navigieren und die generierten IDs übergeben
         if (mounted) {
            Navigator.pushReplacement( // Ersetzt diesen Screen, kein Zurück möglich
              context,
@@ -103,7 +143,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                  userName: userName,
                  numberOfQuestions: numberOfQuestions,
                  hasModerator: moderatorEnabled, // Moderator-Status übergeben
-                 roomId: newRoomId,             // Echte Raum-ID übergeben
+                 roomId: uniqueRoomId,           // Kurze, eindeutige Raum-ID übergeben
                  moderatorRoomId: moderatorId, // Abgeleitete Moderator-ID übergeben
                ),
              ),
@@ -128,12 +168,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     } else {
       // Formular ist ungültig
       debugPrint("Formular ist ungültig.");
-      // Optional: Zusätzliche Snackbar hier, obwohl Validator schon Meldungen zeigt
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   const SnackBar(content: Text('Bitte überprüfe deine Eingaben.'), backgroundColor: Colors.red),
-      // );
+      setState(() { _isCreatingRoom = false; }); // Wichtig: Auch hier zurücksetzen
     }
   }
+  // --------------------------------------------------------------
+
 
   @override
   Widget build(BuildContext context) {
@@ -199,7 +238,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                     ],
                   ),
                 ),
-                if (!_hasChallenges) const SizedBox(height: 40),
+                if (!_hasChallenges) const SizedBox(height: 40), // Sicherstellen, dass der Button immer unten ist
                 ElevatedButton(
                   // Deaktiviere Button während Erstellung läuft
                   onPressed: _isCreatingRoom ? null : _navigateToWaitingRoom,
@@ -213,7 +252,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                       : const Text('Weiter zum Wartebereich'),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 20), // Platz am Ende
               ],
             ),
           ),

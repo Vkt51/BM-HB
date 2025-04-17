@@ -12,11 +12,11 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   audioplayers: ^5.2.1 # Für den Jingle
-  mobile_scanner: ^5.1.0 # Füge diese Zeile hinzu
+  mobile_scanner: ^6.0.7 # Füge diese Zeile hinzu
   qr_code_scanner: ^1.0.1 # <-- DIESE ZEILE HINZUFÜGEN (Version prüfen!)
   qr_flutter: ^4.1.0    # <-- Dieses Paket hinzufügen
-  firebase_core: ^3.0.0 # <-- Kernpaket für Firebase (Version prüfen!)
-  cloud_firestore: ^5.0.0 # <-- Paket für Firestore (Version prüfen!)
+  firebase_core: ^3.13.0 # <-- Kernpaket für Firebase (Version prüfen!)
+  cloud_firestore: ^5.6.6 # <-- Paket für Firestore (Version prüfen!)
 
 
 

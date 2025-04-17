@@ -2,35 +2,48 @@ import 'package:flutter/material.dart';
 import 'dart:math'; // Für Beispiel-Daten Generierung
 
 // Importiere den Start-Screen für "Neues Spiel"
-import 'home_screen.dart';
+import 'home_screen.dart'; // Stelle sicher, dass dieser Import korrekt ist
 
 class ResultsScreen extends StatelessWidget {
   final String userName;
   final int numberOfQuestions; // Wie viele Fragen wurden gestellt?
   final List<String> participants; // Namen der Teilnehmer
 
+  // --- NEU: Parameter für die Raum-ID hinzugefügt ---
+  final String roomId;
+  // ------------------------------------------------
+
   // !! WICHTIG: Dies ist eine Simulation !!
   // In einer echten App müssten die 'collectedRankings'
-  // übergeben oder aus einem State gelesen werden.
+  // übergeben oder aus Firestore basierend auf 'roomId' gelesen werden.
   final List<List<Map<String, String>>> collectedRankings;
 
-  // Konstruktor, der die simulierten Daten erstellt
+  // --- ANGEPASSTER KONSTRUKTOR ---
+  // Nimmt jetzt auch roomId entgegen
   ResultsScreen({
     super.key,
     required this.userName,
     required this.numberOfQuestions,
     required this.participants,
-  }) : collectedRankings = _generateSimulatedRankings(numberOfQuestions, participants);
+    // --- NEU: roomId im Konstruktor ---
+    required this.roomId,
+    // ------------------------------
+    // Die Simulation wird weiterhin hier aufgerufen, ABER in einer echten App
+    // würde man die Daten wahrscheinlich basierend auf roomId laden, nicht hier generieren.
+  }) : collectedRankings = _generateSimulatedRankings(numberOfQuestions, participants) {
+    // Logge die empfangene Raum-ID
+    debugPrint("ResultsScreen initialisiert für Raum: $roomId");
+  }
+  // -----------------------------
 
 
-  // --- Hilfsfunktion zur Generierung SIMULIERTER Rankings ---
+  // --- Hilfsfunktion zur Generierung SIMULIERTER Rankings (unverändert) ---
   // Erzeugt zufällige Rankings für jede Frage, nur für Demo-Zwecke!
   static List<List<Map<String, String>>> _generateSimulatedRankings(int numQuestions, List<String> participantNames) {
      print("--- GENERIERE SIMULIERTE RANKINGS (NUR ZUR DEMO) ---");
      final random = Random();
      List<List<Map<String, String>>> allRankings = [];
 
-     // Dummy-Antworten pro Person (könnten auch zufälliger sein)
      Map<String, List<String>> possibleAnswers = {
        'Jacqueline': ['Ja klar!', 'Auf jeden Fall!', 'Immer doch!', 'Logisch!', 'Schwanz schwanz'],
        'Petra': ['Vielleicht...', 'Mal sehen.', 'Wer weiß?', 'Möglich.', 'Gott ist groß'],
@@ -38,11 +51,9 @@ class ResultsScreen extends StatelessWidget {
      };
 
      for (int i = 0; i < numQuestions; i++) {
-       // Mische die Teilnehmer für diese Runde zufällig
        List<String> shuffledNames = List.from(participantNames)..shuffle(random);
        List<Map<String, String>> questionRanking = [];
        for (String name in shuffledNames) {
-         // Wähle eine zufällige Antwort für diese Person
          String answer = possibleAnswers[name]?[random.nextInt(possibleAnswers[name]!.length)] ?? 'Keine Antwort';
          questionRanking.add({'name': name, 'answer': answer});
        }
@@ -54,33 +65,27 @@ class ResultsScreen extends StatelessWidget {
   // --- Ende Simulations-Funktion ---
 
 
-  // --- Berechnet die Endpunktzahl basierend auf den Rankings ---
+  // --- Berechnet die Endpunktzahl basierend auf den Rankings (unverändert) ---
   Map<String, int> _calculateScores() {
-    // Map zum Speichern der Punkte pro Teilnehmer
     Map<String, int> scores = { for (var p in participants) p : 0 };
-
-    // Punktevergabe: 3 Punkte für Platz 1, 2 für Platz 2, 1 für Platz 3
     const int pointsRank1 = 3;
     const int pointsRank2 = 2;
     const int pointsRank3 = 1;
 
-    // Gehe durch die Rankings jeder Frage
+    // TODO: In einer echten App würden die 'collectedRankings' nicht simuliert,
+    // sondern aus Firestore für den 'roomId' geladen.
     for (List<Map<String, String>> questionRanking in collectedRankings) {
       if (questionRanking.isNotEmpty) {
-        // Punkte für Platz 1
         scores[questionRanking[0]['name']!] = (scores[questionRanking[0]['name']!] ?? 0) + pointsRank1;
       }
       if (questionRanking.length > 1) {
-        // Punkte für Platz 2
          scores[questionRanking[1]['name']!] = (scores[questionRanking[1]['name']!] ?? 0) + pointsRank2;
       }
        if (questionRanking.length > 2) {
-        // Punkte für Platz 3
          scores[questionRanking[2]['name']!] = (scores[questionRanking[2]['name']!] ?? 0) + pointsRank3;
       }
-      // Bei mehr als 3 Teilnehmern müsste die Logik erweitert werden
     }
-    print("--- Berechnete Scores: $scores ---");
+    print("--- Berechnete Scores für Raum $roomId: $scores ---"); // roomId hinzugefügt
     return scores;
   }
 
@@ -91,21 +96,22 @@ class ResultsScreen extends StatelessWidget {
     final scores = _calculateScores();
 
     // Sortiere die Teilnehmer nach Punkten (absteigend)
-    // Wandle die Map in eine Liste von MapEntries um und sortiere sie
     final List<MapEntry<String, int>> sortedScores = scores.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value)); // b vs a für absteigend
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-    print("--- Sortierte Scores: $sortedScores ---");
+    print("--- Sortierte Scores für Raum $roomId: $sortedScores ---"); // roomId hinzugefügt
 
     String winnerName = sortedScores.isNotEmpty ? sortedScores[0].key : "Niemand";
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Herzblatt Ergebnis für $userName'),
+        // Optional: Füge Raum-ID zum Titel hinzu für Debugging
+        // title: Text('Ergebnis $userName (Raum: $roomId)'),
         backgroundColor: Colors.pinkAccent,
         automaticallyImplyLeading: false, // Kein Zurück
       ),
-      body: Container( // Hintergrund hinzufügen?
+      body: Container(
          decoration: BoxDecoration(
            gradient: LinearGradient(
              begin: Alignment.topCenter,
@@ -116,8 +122,8 @@ class ResultsScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center, // Zentriert vertikal
-            crossAxisAlignment: CrossAxisAlignment.stretch, // Streckt Elemente horizontal
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 '✨ And the winner is... ✨',
@@ -130,7 +136,7 @@ class ResultsScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 15),
-              // Gewinner-Anzeige
+              // Gewinner-Anzeige (unverändert)
               if (sortedScores.isNotEmpty)
                 Card(
                    color: Colors.pink.shade100,
@@ -164,10 +170,10 @@ class ResultsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 15),
 
-              // Gesamte Rangliste anzeigen
-              Expanded( // Nimmt verfügbaren Platz
+              // Gesamte Rangliste anzeigen (unverändert)
+              Expanded(
                 child: ListView.builder(
-                  shrinkWrap: true, // Verhindert unendliche Höhe in Column
+                  shrinkWrap: true,
                   itemCount: sortedScores.length,
                   itemBuilder: (context, index) {
                     final entry = sortedScores[index];
@@ -193,14 +199,14 @@ class ResultsScreen extends StatelessWidget {
                           ),
                         ),
                         title: Text(
-                          entry.key, // Name des Teilnehmers
+                          entry.key,
                            style: TextStyle(
                                fontSize: 18,
                                fontWeight: isWinner ? FontWeight.bold : FontWeight.normal
                            ),
                         ),
                         trailing: Text(
-                          '${entry.value} Punkte', // Punktzahl
+                          '${entry.value} Punkte',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.pink.shade700,
@@ -211,19 +217,18 @@ class ResultsScreen extends StatelessWidget {
                     );
                   },
                 ),
-              ), // Ende Expanded ListView
+              ),
 
               const SizedBox(height: 30),
 
-              // Button zum Neustarten
+              // Button zum Neustarten (unverändert)
               ElevatedButton.icon(
                  icon: const Icon(Icons.refresh),
                  label: const Text('Neues Spiel starten'),
                  onPressed: () {
-                   // Geht zurück zum allerersten Screen (HomeScreen) in der Navigationshistorie
                    Navigator.of(context).pushAndRemoveUntil(
                        MaterialPageRoute(builder: (context) => const HomeScreen()),
-                       (Route<dynamic> route) => false, // Entfernt alle vorherigen Routes
+                       (Route<dynamic> route) => false,
                    );
                  },
                  style: ElevatedButton.styleFrom(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math'; // Für die Zufallsauswahl
 
 // Importiere den nächsten Screen
-import 'answer_ranking_screen.dart';
+import 'answer_ranking_screen.dart'; // Stelle sicher, dass dieser Import korrekt ist
 
 class QuestionScreen extends StatefulWidget {
   final String userName;
@@ -10,12 +10,19 @@ class QuestionScreen extends StatefulWidget {
   final List<String> participants;
   final int currentQuestionIndex; // Index der aktuellen Frage (0-basiert)
 
+  // --- NEU: Parameter für die Raum-ID hinzugefügt ---
+  final String roomId;
+  // ------------------------------------------------
+
   const QuestionScreen({
     super.key,
     required this.userName,
     required this.numberOfQuestions,
     required this.participants,
     this.currentQuestionIndex = 0, // Standardmäßig die erste Frage (Index 0)
+    // --- NEU: roomId im Konstruktor hinzugefügt ---
+    required this.roomId,
+    // -------------------------------------------
   });
 
   @override
@@ -23,7 +30,7 @@ class QuestionScreen extends StatefulWidget {
 }
 
 class _QuestionScreenState extends State<QuestionScreen> {
-  // --- Die Datenbank mit Fragen ---
+  // --- Die Datenbank mit Fragen (unverändert) ---
   final List<String> _allQuestions = [
     "Wenn ich eine Sonnenliege wäre – wie würdest du dich auf mir breitmachen?",
     "Was ist dein geheimes Talent, das man erst nach Mitternacht zu sehen bekommt?",
@@ -57,26 +64,27 @@ class _QuestionScreenState extends State<QuestionScreen> {
     "Wenn wir zusammen im Aufzug stecken bleiben – was passiert in den ersten 10 Minuten?",
   ];
 
-  // State Variablen
-  List<String> _randomOptions = []; // Die 3 zufälligen Fragen
-  int? _selectedOptionIndex; // Index der ausgewählten zufälligen Frage (0, 1, 2)
+  // State Variablen (unverändert)
+  List<String> _randomOptions = [];
+  int? _selectedOptionIndex;
   final _customQuestionController = TextEditingController();
-  String? _finalSelectedQuestion; // Die letztendlich ausgewählte Frage (Text)
-  bool _isCustomQuestionFocused = false; // Trackt, ob das Textfeld fokussiert ist
+  String? _finalSelectedQuestion;
+  bool _isCustomQuestionFocused = false;
 
   @override
   void initState() {
     super.initState();
+    // Die empfangene Raum-ID kann hier verwendet werden (z.B. für Debugging)
+    debugPrint("QuestionScreen initialisiert für Raum: ${widget.roomId}");
     _selectRandomQuestions();
-    // Listener hinzufügen, um zu erkennen, wenn der Benutzer tippt
     _customQuestionController.addListener(_onCustomQuestionChanged);
   }
 
+  // _selectRandomQuestions (unverändert)
   void _selectRandomQuestions() {
     final random = Random();
-    // Sicherstellen, dass wir nicht mehr Fragen auswählen wollen, als verfügbar sind
     final count = min(3, _allQuestions.length);
-    final Set<String> selected = {}; // Set verhindert Duplikate
+    final Set<String> selected = {};
 
     while (selected.length < count) {
       final randomIndex = random.nextInt(_allQuestions.length);
@@ -84,53 +92,52 @@ class _QuestionScreenState extends State<QuestionScreen> {
     }
     setState(() {
       _randomOptions = selected.toList();
-      _selectedOptionIndex = null; // Auswahl zurücksetzen
-      _finalSelectedQuestion = null; // Auswahl zurücksetzen
+      _selectedOptionIndex = null;
+      _finalSelectedQuestion = null;
     });
   }
 
-  // Wird aufgerufen, wenn der Benutzer in das Textfeld tippt
+  // _onCustomQuestionChanged (unverändert)
   void _onCustomQuestionChanged() {
      if (_customQuestionController.text.isNotEmpty && _isCustomQuestionFocused) {
       setState(() {
-        _selectedOptionIndex = null; // Zufällige Auswahl aufheben
+        _selectedOptionIndex = null;
         _finalSelectedQuestion = _customQuestionController.text.trim();
       });
     } else if (_customQuestionController.text.isEmpty && _selectedOptionIndex == null) {
-       // Wenn das Feld geleert wird und keine Zufallsoption gewählt ist
        setState(() {
           _finalSelectedQuestion = null;
        });
     }
   }
 
-  // Wird aufgerufen, wenn eine der Zufallsfragen ausgewählt wird
+  // _selectRandomOption (unverändert)
   void _selectRandomOption(int index) {
     setState(() {
       _selectedOptionIndex = index;
-      _customQuestionController.clear(); // Eigenes Feld leeren
-       _isCustomQuestionFocused = false; // Fokus-Tracking zurücksetzen
+      _customQuestionController.clear();
+       _isCustomQuestionFocused = false;
       _finalSelectedQuestion = _randomOptions[index];
-      // Tastatur ausblenden, falls sie offen war
       FocusScope.of(context).unfocus();
     });
   }
 
-   // Navigiert zum nächsten Screen (Antworten-Ranking)
+   // --- ANGEPASST: _navigateToAnswerScreen ---
+   // Navigiert zum nächsten Screen (Antworten-Ranking) und übergibt roomId
   void _navigateToAnswerScreen() {
     if (_finalSelectedQuestion == null || _finalSelectedQuestion!.isEmpty) {
-      // Sollte nicht passieren, wenn der Button korrekt aktiviert/deaktiviert wird,
-      // aber als Sicherheitsnetz.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Bitte wähle oder gib eine Frage ein!')),
       );
       return;
     }
 
-    print('Frage ausgewählt: "$_finalSelectedQuestion"');
+    print('Frage ausgewählt: "$_finalSelectedQuestion" für Raum ${widget.roomId}'); // roomId hinzugefügt
     print('Aktueller Frageindex (0-basiert): ${widget.currentQuestionIndex}');
 
-    Navigator.push( // Normaler Push, um zurück zu können falls nötig? Oder pushReplacement?
+    // WICHTIG: Stelle sicher, dass AnswerRankingScreen auch 'roomId' erwartet!
+    // Du musst AnswerRankingScreen wahrscheinlich genauso anpassen wie diesen Screen.
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AnswerRankingScreen(
@@ -139,10 +146,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
           currentQuestionIndex: widget.currentQuestionIndex,
           participants: widget.participants,
           chosenQuestion: _finalSelectedQuestion!,
+          // --- NEU: roomId an den nächsten Screen weitergeben ---
+          roomId: widget.roomId,
+          // ---------------------------------------------------
         ),
       ),
     );
   }
+  // -----------------------------------------
 
   @override
   void dispose() {
@@ -153,19 +164,19 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Zustand für den "Weiter"-Button
     final bool isNextButtonEnabled = _finalSelectedQuestion != null && _finalSelectedQuestion!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        // Zeigt "Frage 1 von 3", "Frage 2 von 3" etc. an
         title: Text('Frage ${widget.currentQuestionIndex + 1} von ${widget.numberOfQuestions}'),
+        // Optional: Raum-ID im Titel für Debugging anzeigen
+        // title: Text('Frage ${widget.currentQuestionIndex + 1}/${widget.numberOfQuestions} (Raum: ${widget.roomId})'),
         backgroundColor: Colors.pinkAccent,
         automaticallyImplyLeading: false, // Keinen Zurück-Pfeil
       ),
-      body: GestureDetector( // Um Tastatur bei Klick daneben auszublenden
+      body: GestureDetector(
          onTap: () => FocusScope.of(context).unfocus(),
-        child: SingleChildScrollView( // Ermöglicht Scrollen, wenn Inhalt zu lang wird
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -177,15 +188,15 @@ class _QuestionScreenState extends State<QuestionScreen> {
               ),
               const SizedBox(height: 25),
 
-              // --- Zufällige Fragen Optionen ---
+              // Zufällige Fragen Optionen (unverändert)
               ..._randomOptions.asMap().entries.map((entry) {
                 int index = entry.key;
                 String question = entry.value;
                 bool isSelected = _selectedOptionIndex == index;
 
                 return Card(
-                  elevation: isSelected ? 6 : 2, // Hervorheben bei Auswahl
-                  color: isSelected ? Colors.pink.shade100 : Colors.white, // Hintergrund bei Auswahl
+                  elevation: isSelected ? 6 : 2,
+                  color: isSelected ? Colors.pink.shade100 : Colors.white,
                   margin: const EdgeInsets.symmetric(vertical: 6.0),
                   child: ListTile(
                     leading: Icon(
@@ -196,7 +207,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     onTap: () => _selectRandomOption(index),
                   ),
                 );
-              }).toList(), // Muss zu einer Liste gemacht werden
+              }).toList(),
 
               const SizedBox(height: 20),
               Text(
@@ -206,17 +217,15 @@ class _QuestionScreenState extends State<QuestionScreen> {
               ),
               const SizedBox(height: 20),
 
-              // --- Eigene Frage Eingabefeld ---
-              Focus( // Um Fokus-Änderungen zu erkennen
+              // Eigene Frage Eingabefeld (unverändert)
+              Focus(
                  onFocusChange: (hasFocus) {
                    setState(() {
                      _isCustomQuestionFocused = hasFocus;
-                     // Wenn Fokus gesetzt wird und Textfeld leer ist, Auswahl aufheben
                      if (hasFocus && _customQuestionController.text.isEmpty) {
                        _selectedOptionIndex = null;
                        _finalSelectedQuestion = null;
                      } else if (hasFocus && _customQuestionController.text.isNotEmpty) {
-                        // Wenn Fokus gesetzt wird und Text vorhanden ist, diesen als Auswahl nehmen
                         _selectedOptionIndex = null;
                         _finalSelectedQuestion = _customQuestionController.text.trim();
                      }
@@ -230,16 +239,15 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     border: OutlineInputBorder(),
                     suffixIcon: Icon(Icons.edit),
                   ),
-                  maxLines: 2, // Erlaubt etwas längere Fragen
+                  maxLines: 2,
                 ),
               ),
               const SizedBox(height: 40),
 
-              // --- Weiter Button ---
+              // Weiter Button (unverändert)
               ElevatedButton.icon(
                 icon: const Icon(Icons.arrow_forward_ios, size: 18),
                 label: const Text('Weiter zur Antwortrunde'),
-                // Button ist nur aktiv, wenn eine Frage ausgewählt oder eingegeben wurde
                 onPressed: isNextButtonEnabled ? _navigateToAnswerScreen : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isNextButtonEnabled ? Colors.green.shade600 : Colors.grey,
@@ -249,7 +257,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              const SizedBox(height: 20), // Platz am Ende
+              const SizedBox(height: 20),
             ],
           ),
         ),
